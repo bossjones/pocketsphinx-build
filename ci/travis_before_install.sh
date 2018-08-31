@@ -36,6 +36,7 @@ function brew_install_or_upgrade {
 
 if [ "${TRAVIS_OS_NAME}" == "osx" ]; then
     brew update
+    brew_install_or_upgrade python
     brew_install_or_upgrade openssl
     brew_install_or_upgrade readline
     brew_install_or_upgrade swig
