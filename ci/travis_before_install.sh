@@ -51,6 +51,9 @@ if [ "${TRAVIS_OS_NAME}" == "osx" ]; then
     brew_install_or_upgrade libffi
     brew_install_or_upgrade ncurses
 
+    brew_install_or_upgrade glib
+    brew_install_or_upgrade gobject-introspection
+    brew_install_or_upgrade py3cairo
     brew_install_or_upgrade gtk+3
     brew_install_or_upgrade gst-plugins-base
     brew_install_or_upgrade gst-plugins-bad
