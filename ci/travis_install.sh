@@ -10,6 +10,8 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 #
 if [ "${TRAVIS_PULL_REQUEST}" == "false" ] && [ "${TRAVIS_BRANCH}" != "master" ]; then
     echo "Regular Push (not PR) on non-master branch:"
+    echo "TRAVIS_PULL_REQUEST: ${TRAVIS_PULL_REQUEST}"
+    echo "TRAVIS_BRANCH: ${TRAVIS_BRANCH}"
     if [ "${TRAVIS_PYTHON_VERSION}" == "2.7" ]; then
         echo "Skipping Python 2.7"
         exit 0
@@ -22,10 +24,10 @@ if [ "${TRAVIS_PULL_REQUEST}" == "false" ] && [ "${TRAVIS_BRANCH}" != "master" ]
         echo "Skipping 'all' configuration"
         exit 0
     fi
-    if [ "${TRAVIS_OS_NAME}" == "osx" ]; then
-        echo "Skipping MacOSX build"
-        exit 0
-    fi
+    # if [ "${TRAVIS_OS_NAME}" == "osx" ]; then
+    #     echo "Skipping MacOSX build"
+    #     exit 0
+    # fi
 fi
 
 if [ "${TRAVIS_OS_NAME}" == "osx" ]; then
