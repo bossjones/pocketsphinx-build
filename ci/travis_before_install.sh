@@ -56,7 +56,8 @@ if [ "${TRAVIS_OS_NAME}" == "osx" ]; then
     brew_install_or_upgrade gst-plugins-bad
     brew_install_or_upgrade gst-plugins-ugly
     brew_install_or_upgrade gst-plugins-good
-    brew_install_or_upgrade pygobject3 --with-libffi
+    # brew_install_or_upgrade pygobject3 --with-libffi
+    brew_install_or_upgrade pygobject3
     brew_install_or_upgrade gsed
 
     env PYTHON_CONFIGURE_OPTS="--enable-shared" pyenv install ${TRAVIS_PYTHON_VERSION}
