@@ -60,6 +60,8 @@ PY_VERSION_FULL = "{}.5".format(PY_VERSION)
 
 
 DIR_OF_THIS_SCRIPT = p.dirname( p.abspath( __file__ ) )
+PATH_TO_ENVRC_BUILD = os.path.join(DIR_OF_THIS_SCRIPT + "/.envrc.build")
+PATH_TO_ENVRC_RUN = os.path.join(DIR_OF_THIS_SCRIPT + "/.envrc.run")
 
 
 import argparse
@@ -95,12 +97,6 @@ DYNAMIC_PYTHON_LIBRARY_REGEX = """
   )$
 """
 
-# JDTLS_MILESTONE = '0.15.0'
-# JDTLS_BUILD_STAMP = '201803152351'
-# JDTLS_SHA256 = (
-#   '4fe3ca50d2b7011f7323863bdf77a16979e5d3a2a534d69e1ef32742cc443061'
-# )
-
 BUILD_ERROR_MESSAGE = (
   'ERROR: the build failed.\n\n'
   'NOTE: it is *highly* unlikely that this is a bug but rather\n'
@@ -110,6 +106,385 @@ BUILD_ERROR_MESSAGE = (
   'issue tracker, including the entire output of this script\n'
   'and the invocation line used to run it.' )
 
+BUILD_SPHINXBASE = """
+jhbuild run ./autogen.sh --prefix={PREFIX}; \
+jhbuild run ./configure --prefix={PREFIX}; \
+jhbuild run make clean all; \
+jhbuild run make install
+"""
+
+BUILD_POCKETSPHINX = """
+jhbuild run ./autogen.sh --prefix={PREFIX}; \
+jhbuild run ./configure --prefix={PREFIX} --with-python; \
+jhbuild run make clean all; \
+jhbuild run make install
+"""
+
+repo_git_dicts = {
+    "sphinxbase": {
+        "repo": "https://github.com/cmusphinx/sphinxbase.git",
+        "branch": "74370799d5b53afc5b5b94a22f5eff9cb9907b97",
+        "compile-commands": BUILD_SPHINXBASE,
+        "folder": "sphinxbase",
+    },
+    "pocketsphinx": {
+        "repo": "https://github.com/cmusphinx/pocketsphinx.git",
+        "branch": "68ef5dc6d48d791a747026cd43cc6940a9e19f69",
+        "compile-commands": BUILD_POCKETSPHINX,
+        "folder": "pocketsphinx",
+    },
+}
+
+
+ENVRC_BUILD_TEMPLATE = """
+export CFLAGS = '{CFLAGS}'
+export PYTHON = 'python'
+export GSTREAMER = '1.0'
+export ENABLE_PYTHON3 = 'yes'
+export ENABLE_GTK = 'yes'
+export PYTHON_VERSION = '{PYTHON_VERSION}'
+export PATH = '{PATH}'
+export LD_LIBRARY_PATH = '{LD_LIBRARY_PATH}'
+export PYTHONPATH = '{PYTHONPATH}'
+export PKG_CONFIG_PATH = '{PKG_CONFIG_PATH}'
+export XDG_DATA_DIRS = '{XDG_DATA_DIRS}'
+export XDG_CONFIG_DIRS = '{XDG_CONFIG_DIRS}'
+export CC = 'gcc'
+export PROJECT_HOME = '{PROJECT_HOME}'
+export PYTHONSTARTUP = '{PYTHONSTARTUP}'
+"""
+
+ENVRC_RUN_TEMPLATE = """
+export CFLAGS = '{CFLAGS}'
+export PYTHON = 'python'
+export GSTREAMER = '1.0'
+export ENABLE_PYTHON3 = 'yes'
+export ENABLE_GTK = 'yes'
+export PYTHON_VERSION = '{PYTHON_VERSION}'
+export PATH = '{PATH}'
+export LD_LIBRARY_PATH = '{LD_LIBRARY_PATH}'
+export PYTHONPATH = '{PYTHONPATH}'
+export PKG_CONFIG_PATH = '{PKG_CONFIG_PATH}'
+export XDG_DATA_DIRS = '{XDG_DATA_DIRS}'
+export XDG_CONFIG_DIRS = '{XDG_CONFIG_DIRS}'
+export CC = 'gcc'
+export PROJECT_HOME = '{PROJECT_HOME}'
+export PYTHONSTARTUP = '{PYTHONSTARTUP}'
+"""
+
+
+
+# -----------------------------------------------------------
+# -----------------------------------------------------------
+# -----------------------------------------------------------
+
+# SOURCE: https://github.com/ARMmbed/mbed-cli/blob/f168237fabd0e32edcb48e214fc6ce2250046ab3/test/util.py
+# Process execution
+class ProcessException(Exception):
+    pass
+
+
+class Console:  # pylint: disable=too-few-public-methods
+
+    quiet = False
+
+    @classmethod
+    def message(cls, str_format, *args):
+        if cls.quiet:
+            return
+
+        if args:
+            print(str_format % args)
+        else:
+            print(str_format)
+
+        # Flush so that messages are printed at the right time
+        # as we use many subprocesses.
+        sys.stdout.flush()
+
+
+def pquery(command, stdin=None, **kwargs):
+    # SOURCE: https://github.com/ARMmbed/mbed-cli/blob/f168237fabd0e32edcb48e214fc6ce2250046ab3/test/util.py
+    # Example:
+    print(" ".join(command))
+    proc = subprocess.Popen(
+        command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, **kwargs
+    )
+    stdout, _ = proc.communicate(stdin)
+
+    if proc.returncode != 0:
+        raise ProcessException(proc.returncode)
+
+    return stdout.decode("utf-8")
+
+
+# Directory navigation
+@contextlib.contextmanager
+def cd(newdir):
+    prevdir = os.getcwd()
+    os.chdir(newdir)
+    try:
+        yield
+    finally:
+        os.chdir(prevdir)
+
+
+def scm(dir=None):
+    if not dir:
+        dir = os.getcwd()
+
+    if os.path.isdir(os.path.join(dir, ".git")):
+        return "git"
+    elif os.path.isdir(os.path.join(dir, ".hg")):
+        return "hg"
+
+
+def _popen(cmd_arg):
+    devnull = open("/dev/null")
+    cmd = subprocess.Popen(cmd_arg, stdout=subprocess.PIPE, stderr=devnull, shell=True)
+    retval = cmd.stdout.read().strip()
+    err = cmd.wait()
+    cmd.stdout.close()
+    devnull.close()
+    if err:
+        raise RuntimeError("Failed to close %s stream" % cmd_arg)
+    return retval
+
+
+def _popen_stdout(cmd_arg, cwd=None):
+    # if passing a single string, either shell mut be True or else the string must simply name the program to be executed without specifying any arguments
+    cmd = subprocess.Popen(
+        cmd_arg,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
+        cwd=cwd,
+        bufsize=4096,
+        shell=True,
+    )
+    Console.message("BEGIN: {}".format(cmd_arg))
+    # output, err = cmd.communicate()
+
+    for line in iter(cmd.stdout.readline, b""):
+        # Print line
+        _line = line.rstrip()
+        Console.message(">>> {}".format(_line.decode("utf-8")))
+
+    Console.message("END: {}".format(cmd_arg))
+
+
+# Higher level functions
+def remove(path):
+    def remove_readonly(func, path, _):
+        os.chmod(path, stat.S_IWRITE)
+        func(path)
+
+    shutil.rmtree(path, onerror=remove_readonly)
+
+
+def move(src, dst):
+    shutil.move(src, dst)
+
+
+def copy(src, dst):
+    shutil.copytree(src, dst)
+
+
+def clone_all():
+    for k, v in repo_git_dicts.items():
+        k_full_path = os.path.join(CHECKOUTROOT, k)
+        git_clone(v["repo"], k_full_path, sha=v["branch"])
+# Clone everything that doesnt exist
+def git_clone(repo_url, dest, sha="master"):
+    # First check if folder exists
+    if not os.path.exists(dest):
+        # check if folder is a git repo
+        if scm(dest) != "git":
+            clone_cmd = "git clone {repo} {dest}".format(repo=repo_url, dest=dest)
+            _popen_stdout(clone_cmd)
+
+            # CD to directory
+            with cd(dest):
+                checkout_cmd = "git checkout {sha}".format(sha=sha)
+                _popen_stdout(checkout_cmd)
+
+def get_package_dict(package_to_build):
+    if package_to_build in repo_git_dicts:
+        return repo_git_dicts
+
+def whoami():
+    whoami = _popen("who")
+    return whoami
+
+
+# Some utility functions used here and in custom files:
+
+
+def environ_append(key, value, separator=" ", force=False):
+    old_value = os.environ.get(key)
+    if old_value is not None:
+        value = old_value + separator + value
+    os.environ[key] = value
+
+
+def environ_prepend(key, value, separator=" ", force=False):
+    old_value = os.environ.get(key)
+    if old_value is not None:
+        value = value + separator + old_value
+    os.environ[key] = value
+
+
+def environ_remove(key, value, separator=":", force=False):
+    old_value = os.environ.get(key)
+    if old_value is not None:
+        old_value_split = old_value.split(separator)
+        value_split = [x for x in old_value_split if x != value]
+        value = separator.join(value_split)
+    os.environ[key] = value
+
+
+def environ_set(key, value):
+    os.environ[key] = value
+
+
+def environ_get(key):
+    return os.environ.get(key)
+
+
+def path_append(value):
+    if os.path.exists(value):
+        environ_append("PATH", value, ":")
+
+
+def path_prepend(value, force=False):
+    if os.path.exists(value):
+        environ_prepend("PATH", value, ":", force)
+
+# Call either setup_debug or setup_release in your .jhbuildrc-custom
+# or other customization file to get the compilation flags.
+def setup_debug():
+    environ_set("CFLAGS", "-fPIC -O0 -ggdb -fno-inline -fno-omit-frame-pointer")
+    environ_set("CXXFLAGS", "-fPIC -O0 -ggdb -fno-inline -fno-omit-frame-pointer")
+    # environ_prepend('CFLAGS', '-O0 -g')
+    # environ_prepend('CXXFLAGS', '-O0 -g')
+
+
+def setup_path_env():
+    # print("before")
+    # dump_env_var("PATH")
+    # /home/pi/jhbuild/bin
+    # /home/pi/jhbuild/sbin
+    # /home/pi/jhbuild/bin
+    # /home/pi/jhbuild/sbin
+    # /home/pi/.pyenv/shims
+    # ~/.pyenv/bin/
+    # ~/.bin
+    # /home/pi/.local/bin
+    # /home/pi/.rbenv/shims
+    # /home/pi/.rbenv/bin
+    # /home/pi/.nvm/versions/node/v8.7.0/bin
+    # /usr/lib64/ccache
+    # /usr/local/bin
+    # /usr/bin
+    # /usr/local/sbin
+    # /usr/sbin
+    # /home/pi/.rvm/bin
+    # /home/pi/.go/bin
+    # /home/pi/go/bin
+    path_prepend("/usr/sbin")
+    path_prepend("/usr/local/sbin")
+    path_prepend("/usr/bin")
+    path_prepend("/usr/local/bin")
+    path_prepend("/usr/lib64/ccache")
+    path_prepend("{}/.rbenv/bin".format(USERHOME))
+    path_prepend("{}/.rbenv/shims".format(USERHOME))
+    path_prepend("{}/.local/bin".format(USERHOME))
+    path_prepend("{}/.bin".format(USERHOME))
+    path_prepend("{}/.pyenv/bin".format(USERHOME), True)
+    path_prepend("{}/.pyenv/shims".format(USERHOME), True)
+    Console.message("AFTER")
+    dump_env_var("PATH")
+
+
+def setup_python_version():
+    environ_set("PYTHON_VERSION", PY_VERSION)
+
+
+def setup_ld_library_path():
+    # /home/pi/jhbuild/lib
+    # /home/pi/jhbuild/lib
+    # /usr/lib
+    environ_prepend("LD_LIBRARY_PATH", "/usr/lib", ":")
+    environ_prepend("LD_LIBRARY_PATH", "/usr/local/lib", ":")
+    environ_prepend("LD_LIBRARY_PATH", "{}/uninstalled/lib".format(USERHOME), ":")
+    Console.message("AFTER")
+    dump_env_var("LD_LIBRARY_PATH")
+
+
+def setup_pythonpath():
+#     # /home/pi/.pyenv/versions/3.5.2/lib/python3.5/site-packages
+#     # /home/pi/jhbuild/lib/python3.5/site-packages
+#     # /usr/lib/python3.5/site-packages
+#     environ_prepend(
+#         "PYTHONPATH", "/usr/lib/python{}/site-packages".format(PY_VERSION), ":"
+#     )
+#     environ_prepend(
+#         "PYTHONPATH",
+#         "{}/jhbuild/lib/python{}/site-packages".format(USERHOME, PY_VERSION),
+#         ":",
+#     )
+#     environ_prepend(
+#         "PYTHONPATH",
+#         "{}/.pyenv/versions/{}/lib/python{}/site-packages".format(
+#             USERHOME, PY_VERSION_FULL, PY_VERSION
+#         ),
+#         ":",
+#     )
+#     Console.message("AFTER")
+    dump_env_var("PYTHONPATH")
+
+def write_envrc():
+    rendered = render_envrc_dry_run()
+    with open(PATH_TO_ENVRC_BUILD, "w+") as fp:
+        fp.write(rendered)
+
+
+def render_envrc_dry_run():
+    rendered = ENVRC_BUILD_TEMPLATE.format(
+        PREFIX=environ_get("PREFIX"),
+        CHECKOUTROOT=environ_get("CHECKOUTROOT"),
+        CFLAGS=environ_get("CFLAGS"),
+        PYTHON_VERSION=environ_get("PYTHON_VERSION"),
+        PATH=environ_get("PATH"),
+        LD_LIBRARY_PATH=environ_get("LD_LIBRARY_PATH"),
+        PYTHONPATH=environ_get("PYTHONPATH"),
+        PKG_CONFIG_PATH=environ_get("PKG_CONFIG_PATH"),
+        XDG_DATA_DIRS=environ_get("XDG_DATA_DIRS"),
+        XDG_CONFIG_DIRS=environ_get("XDG_CONFIG_DIRS"),
+        PROJECT_HOME=environ_get("PROJECT_HOME"),
+        PYTHONSTARTUP=environ_get("PYTHONSTARTUP"),
+    )
+    Console.message("----------------[render_envrc_dry_run]----------------")
+    Console.message(rendered)
+
+    return rendered
+
+
+def mkdir_p(path):
+    try:
+        os.makedirs(path)
+    except OSError as exc:  # Python >2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise
+
+
+def dump_env_var(var):
+    Console.message("Env Var:{}={}".format(var, os.environ.get(var, "<EMPTY>")))
+
+# -----------------------------------------------------------
+# -----------------------------------------------------------
+# -----------------------------------------------------------
 
 def OnMac():
   return platform.system() == 'Darwin'
@@ -327,6 +702,160 @@ def GetGenerator( args ):
         arch = ' Win64' if platform.architecture()[ 0 ] == '64bit' else '' )
   return 'Unix Makefiles'
 
+def BuildPsBuildLib( cmake, cmake_common_args, script_args ):
+  if script_args.build_dir:
+    build_dir = os.path.abspath( script_args.build_dir )
+    if not os.path.exists( build_dir ):
+      os.makedirs( build_dir )
+  else:
+    build_dir = mkdtemp( prefix = 'ps_build_build_' )
+
+  try:
+    os.chdir( build_dir )
+
+    configure_command = ( [ cmake ] + cmake_common_args +
+                          GetCmakeArgs( script_args ) )
+    configure_command.append( p.join( DIR_OF_THIS_SCRIPT, 'cpp' ) )
+
+    CheckCall( configure_command,
+               exit_message = BUILD_ERROR_MESSAGE,
+               quiet = script_args.quiet,
+               status_message = 'Generating pocketsphinx-build build configuration' )
+
+    build_targets = [ 'ps_build_core' ]
+    if script_args.core_tests:
+      build_targets.append( 'ps_build_core_tests' )
+    if 'PS_BUILD_BENCHMARK' in os.environ:
+      build_targets.append( 'ps_build_core_benchmarks' )
+
+    build_config = GetCMakeBuildConfiguration( script_args )
+
+    for target in build_targets:
+      build_command = ( [ cmake, '--build', '.', '--target', target ] +
+                        build_config )
+      CheckCall( build_command,
+                 exit_message = BUILD_ERROR_MESSAGE,
+                 quiet = script_args.quiet,
+                 status_message = 'Compiling pocketsphinx-build target: {0}'.format(
+                   target ) )
+
+    if script_args.core_tests:
+      RunPsBuildTests( script_args, build_dir )
+    if 'PS_BUILD_BENCHMARK' in os.environ:
+      RunPsBuildBenchmarks( build_dir )
+  finally:
+    os.chdir( DIR_OF_THIS_SCRIPT )
+
+    if script_args.build_dir:
+      print( 'The build files are in: ' + build_dir )
+    else:
+      rmtree( build_dir, ignore_errors = OnCiService() )
+
+# SOURCE: https://github.com/seanfisk/fly-compiler/blob/e4448e380f2705c44849d08be00488385fe17897/scripts/build
+# Utility functions
+def brew(*args):
+    brew_bin = FindBrew()
+    return subprocess.check_output([brew_bin] + list(args)).rstrip()
+
+def get_brew_path_prefix():
+    """To get brew path"""
+    brew_bin = FindBrew()
+    try:
+        return subprocess.check_output([brew_bin, '--prefix'],
+                                       universal_newlines=True).strip()
+    except:
+        return None
+
+# SOURCE: https://github.com/seanfisk/fly-compiler/blob/e4448e380f2705c44849d08be00488385fe17897/scripts/build
+###################### -------------------------
+# # Get the path to the LLVM CMake modules.
+# llvm_cmake_dir = join(
+#     brew('--cellar', 'llvm' + ''.join(LLVM_VERSION_TUPLE[:2])),
+#     '.'.join(LLVM_VERSION_TUPLE),
+#     'lib',
+#     'llvm-{}'.format('.'.join(LLVM_VERSION_TUPLE[:2])),
+#     'share', 'llvm', 'cmake')
+###################### -------------------------
+
+def AddKegsToPath():
+  # Bison and Flex are keg-only, which means they are not symlinked into `brew
+  # --prefix'. We can access the current versions through the opt/ directory,
+  # given by `brew --prefix FORMULA'.
+  #
+  # We find these and put them on the PATH for CMake to find.
+  try:
+      paths_var = os.environ['PATH']
+  except KeyError:
+      paths = []
+  else:
+      paths = paths_var.split(os.pathsep)
+  for tool in ['flex', 'bison', 'swig', 'autoconf', 'automake', 'libtool', 'pkg-config']:
+      paths.insert(0, os.path.join(brew('--prefix', tool), 'bin'))
+  cmake_env = os.environ.copy()
+  cmake_env['PATH'] = os.pathsep.join(paths)
+
+# ----------------------------
+# SOURCE: https://github.com/jmwhitfi/cffi/blob/2a16b7c274850bb485769b4a3b023652096f0182/setup.py
+
+def _ask_pkg_config(resultlist, option, result_prefix='', sysroot=False, pkg_name='libffi'):
+    pkg_config = os.environ.get('PKG_CONFIG','pkg-config')
+    try:
+        p = subprocess.Popen([pkg_config, option, pkg_name],
+                             stdout=subprocess.PIPE)
+    except OSError as e:
+        if e.errno not in [errno.ENOENT, errno.EACCES]:
+            raise
+    else:
+        t = p.stdout.read().decode().strip()
+        p.stdout.close()
+        if p.wait() == 0:
+            res = t.split()
+            # '-I/usr/...' -> '/usr/...'
+            for x in res:
+                assert x.startswith(result_prefix)
+            res = [x[len(result_prefix):] for x in res]
+            print('PKG_CONFIG:', option, res)
+
+            sysroot = sysroot and os.environ.get('PKG_CONFIG_SYSROOT_DIR', '')
+            if sysroot:
+                # old versions of pkg-config don't support this env var,
+                # so here we emulate its effect if needed
+                res = [path if path.startswith(sysroot)
+                            else sysroot + path
+                         for path in res]
+            #
+            resultlist[:] = res
+
+def use_pkg_config():
+    # sources = ['c/_cffi_backend.c']
+    # libraries = ['ffi']
+    # include_dirs = ['/usr/include/ffi',
+    #                 '/usr/include/libffi']    # may be changed by pkg-config
+    # define_macros = []
+    # library_dirs = []
+    # extra_compile_args = []
+    # extra_link_args = []
+
+    if sys.platform == 'darwin' and os.path.exists('/usr/local/bin/brew'):
+        use_homebrew_for_libffi()
+
+    # _ask_pkg_config(include_dirs,       '--cflags-only-I', '-I', sysroot=True)
+    # _ask_pkg_config(extra_compile_args, '--cflags-only-other')
+    # _ask_pkg_config(library_dirs,       '--libs-only-L', '-L', sysroot=True)
+    # _ask_pkg_config(extra_link_args,    '--libs-only-other')
+    # _ask_pkg_config(libraries,          '--libs-only-l', '-l')
+
+def use_homebrew_for_libffi():
+    # We can build by setting:
+    # PKG_CONFIG_PATH = $(brew --prefix libffi)/lib/pkgconfig
+    with os.popen('brew --prefix libffi') as brew_prefix_cmd:
+        prefix = brew_prefix_cmd.read().strip()
+    pkgconfig = os.path.join(prefix, 'lib', 'pkgconfig')
+    os.environ['PKG_CONFIG_PATH'] = (
+        os.environ.get('PKG_CONFIG_PATH', '') + ':' + pkgconfig)
+# ----------------------------
+
+# SOURCE: https://github.com/mengdaya/fuckshell/blob/c88b0792b8a2db3c181938af6c357662993a30c3/thefuck/specific/brew.py
 
 def ParseArguments():
   parser = argparse.ArgumentParser()
@@ -336,6 +865,8 @@ def ParseArguments():
                        help = 'Compile pocketsphinx' )
   parser.add_argument( '--python3', action = 'store_true',
                        help = 'Enable python3 bindings.' )
+  parser.add_argument( '--clean', action = 'store_true',
+                       help = 'Run make clean in source folders' )
   # parser.add_argument( '--cs-completer', action = 'store_true',
   #                      help = 'Enable C# semantic completion engine.' )
   # parser.add_argument( '--go-completer', action = 'store_true',
@@ -368,12 +899,15 @@ def ParseArguments():
                        help   = 'For developers: build pocketsphinx/sphinxbase library with '
                                 'debug symbols' )
   parser.add_argument( '--build-dir',
+                       default=PREFIX,
                        help   = 'For developers: perform the build in the '
                                 'specified directory, and do not delete the '
                                 'build output. This is useful for incremental '
                                 'builds, and required for coverage data' )
   parser.add_argument( '--checkout-dir',
-                       help   = 'For developers: location of folder where we download git repos or tar files for cmusphinx and pocketsphinx' )
+                       help   = 'For developers: location of folder where we download git repos or tar files for cmusphinx and pocketsphinx',
+                       default=CHECKOUTROOT
+                        )
   parser.add_argument( '--quiet',
                        action = 'store_true',
                        help = 'Quiet installation mode. Just print overall '
@@ -387,6 +921,9 @@ def ParseArguments():
   parser.add_argument( '--run-envrc',
                        action = 'store_true',
                        help = "Create run .envrc file" )
+  parser.add_argument( '--clone-all',
+                       action = 'store_true',
+                       help = "Clone all repos" )
 
   # parser.add_argument( '--no-regex',
   #                      action = 'store_true',
@@ -415,6 +952,9 @@ def ParseArguments():
 def FindCmake():
   return FindExecutableOrDie( 'cmake', 'CMake is required to build pocketsphinx-build' )
 
+
+def FindBrew():
+  return FindExecutableOrDie( 'brew', 'brew is required to build pocketsphinx-build' )
 
 def GetCmakeCommonArgs( args ):
   cmake_args = [ '-G', GetGenerator( args ) ]
@@ -519,56 +1059,6 @@ def GetCMakeBuildConfiguration( args ):
       return [ '--config', 'Debug' ]
     return [ '--config', 'Release' ]
   return [ '--', '-j', str( NumCores() ) ]
-
-
-def BuildPsBuildLib( cmake, cmake_common_args, script_args ):
-  if script_args.build_dir:
-    build_dir = os.path.abspath( script_args.build_dir )
-    if not os.path.exists( build_dir ):
-      os.makedirs( build_dir )
-  else:
-    build_dir = mkdtemp( prefix = 'ps_build_build_' )
-
-  try:
-    os.chdir( build_dir )
-
-    configure_command = ( [ cmake ] + cmake_common_args +
-                          GetCmakeArgs( script_args ) )
-    configure_command.append( p.join( DIR_OF_THIS_SCRIPT, 'cpp' ) )
-
-    CheckCall( configure_command,
-               exit_message = BUILD_ERROR_MESSAGE,
-               quiet = script_args.quiet,
-               status_message = 'Generating pocketsphinx-build build configuration' )
-
-    build_targets = [ 'ps_build_core' ]
-    if script_args.core_tests:
-      build_targets.append( 'ps_build_core_tests' )
-    if 'PS_BUILD_BENCHMARK' in os.environ:
-      build_targets.append( 'ps_build_core_benchmarks' )
-
-    build_config = GetCMakeBuildConfiguration( script_args )
-
-    for target in build_targets:
-      build_command = ( [ cmake, '--build', '.', '--target', target ] +
-                        build_config )
-      CheckCall( build_command,
-                 exit_message = BUILD_ERROR_MESSAGE,
-                 quiet = script_args.quiet,
-                 status_message = 'Compiling pocketsphinx-build target: {0}'.format(
-                   target ) )
-
-    if script_args.core_tests:
-      RunPsBuildTests( script_args, build_dir )
-    if 'PS_BUILD_BENCHMARK' in os.environ:
-      RunPsBuildBenchmarks( build_dir )
-  finally:
-    os.chdir( DIR_OF_THIS_SCRIPT )
-
-    if script_args.build_dir:
-      print( 'The build files are in: ' + build_dir )
-    else:
-      rmtree( build_dir, ignore_errors = OnCiService() )
 
 
 # def BuildRegexModule( cmake, cmake_common_args, script_args ):
