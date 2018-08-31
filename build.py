@@ -867,6 +867,8 @@ def ParseArguments():
                        help = 'Enable python3 bindings.' )
   parser.add_argument( '--clean', action = 'store_true',
                        help = 'Run make clean in source folders' )
+  parser.add_argument( '--render-dry-run', action = 'store_true',
+                       help = 'Dump env config file' )
   # parser.add_argument( '--cs-completer', action = 'store_true',
   #                      help = 'Enable C# semantic completion engine.' )
   # parser.add_argument( '--go-completer', action = 'store_true',
@@ -1228,16 +1230,47 @@ def WritePythonUsedDuringBuild():
     f.write( sys.executable )
 
 
+def setup_pkg_config_path():
+#     # /home/pi/.pyenv/versions/3.5.2/lib/pkgconfig
+#     # /home/pi/uninstalled/lib/pkgconfig
+#     # /home/pi/uninstalled/share/pkgconfig
+#     # /usr/lib/pkgconfig
+#     environ_prepend("PKG_CONFIG_PATH", "/usr/lib/pkgconfig", ":")
+#     environ_prepend(
+#         "PKG_CONFIG_PATH", "{}/uninstalled/share/pkgconfig".format(USERHOME), ":"
+#     )
+#     environ_prepend("PKG_CONFIG_PATH", "{}/uninstalled/lib/pkgconfig".format(USERHOME), ":")
+#     environ_prepend(
+#         "PKG_CONFIG_PATH",
+#         "{}/.pyenv/versions/{}/lib/pkgconfig".format(USERHOME, PY_VERSION_FULL),
+#         ":",
+#     )
+#     Console.message("AFTER")
+    dump_env_var("PKG_CONFIG_PATH")
+
+
+def setup_all_envs():
+    setup_debug()
+    setup_path_env()
+    setup_python_version()
+    setup_ld_library_path()
+    setup_pythonpath()
+    setup_pkg_config_path()
+
+
 def Main():
   args = ParseArguments()
   # FIXME: Add FindGCC - 10/30/2018
   # FIXME: Add FindClang - 10/30/2018
   cmake = FindCmake()
   cmake_common_args = GetCmakeCommonArgs( args )
-  if not args.skip_build:
-    ExitIfPsBuildLibInUseOnWindows()
-    BuildPsBuildLib( cmake, cmake_common_args, args )
-    WritePythonUsedDuringBuild()
+  # if not args.skip_build:
+  #   ExitIfPsBuildLibInUseOnWindows()
+  #   BuildPsBuildLib( cmake, cmake_common_args, args )
+  #   WritePythonUsedDuringBuild()
+  if args.render_dry_run:
+      setup_all_envs()
+      render_envrc_dry_run()
   # if not args.no_regex:
   #   BuildRegexModule( cmake, cmake_common_args, args )
   # if args.cs_completer or args.omnisharp_completer or args.all_completers:
