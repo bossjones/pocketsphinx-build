@@ -1,0 +1,173 @@
+language: python
+
+matrix:
+  include:
+  - os: osx
+    osx_image: xcode9.3
+    language: generic
+    python: 3.6
+    env: PS_BUILD_SOLVER="msat,z3,yices"       PS_BUILD_GMPY="TRUE"   TRAVIS_PYTHON_VERSION="3.6.5"
+  # - os: osx
+  #   osx_image: xcode9.3
+  #   language: generic
+  #   python: 3.6
+  #   env: PS_BUILD_SOLVER="msat,z3,yices"       PS_BUILD_GMPY="FALSE"   TRAVIS_PYTHON_VERSION="3.6.5"
+  # - os: osx
+  #   osx_image: xcode9
+  #   language: generic
+  #   python: 3.6
+  #   env: PS_BUILD_SOLVER="None"      PS_BUILD_GMPY="FALSE"   PS_BUILD_CYTHON="TRUE"   TRAVIS_PYTHON_VERSION="3.6.5"
+  # - os: osx
+  #   osx_image: xcode9
+  #   language: generic
+  #   python: 3.6
+  #   env: PS_BUILD_SOLVER="None"      PS_BUILD_GMPY="FALSE"   PS_BUILD_CYTHON="FALSE"   TRAVIS_PYTHON_VERSION="3.6.5"
+  # - os: osx
+  #   osx_image: xcode9
+  #   language: generic
+  #   python: 3.6
+  #   env: PS_BUILD_SOLVER="msat"      PS_BUILD_GMPY="FALSE"   TRAVIS_PYTHON_VERSION="3.6.5"
+  # - os: osx
+  #   osx_image: xcode9.3
+  #   language: generic
+  #   python: 3.6
+  #   env: PS_BUILD_SOLVER="z3"        PS_BUILD_GMPY="FALSE"   TRAVIS_PYTHON_VERSION="3.6.5"
+  # # - os: osx
+  # #   osx_image: xcode9
+  # #   language: generic
+  # #   python: 3.6
+  # #   env: PS_BUILD_SOLVER="cvc4"      PS_BUILD_GMPY="FALSE"   TRAVIS_PYTHON_VERSION="3.6.5"
+  # - os: osx
+  #   osx_image: xcode9
+  #   language: generic
+  #   python: 3.6
+  #   env: PS_BUILD_SOLVER="yices"     PS_BUILD_GMPY="FALSE"   TRAVIS_PYTHON_VERSION="3.6.5"
+  # # - os: osx
+  # #   osx_image: xcode9
+  # #   language: generic
+  # #   python: 3.6
+  # #   env: PS_BUILD_SOLVER="bdd"       PS_BUILD_GMPY="FALSE"   TRAVIS_PYTHON_VERSION="3.6.5"
+  # # - os: osx
+  # #   osx_image: xcode9
+  # #   language: generic
+  # #   python: 3.6
+  # #   env: PS_BUILD_SOLVER="picosat"   PS_BUILD_GMPY="FALSE"   TRAVIS_PYTHON_VERSION="3.6.5"
+  # # - os: osx
+  # #   osx_image: xcode9
+  # #   language: generic
+  # #   python: 3.6
+  # #   env: PS_BUILD_SOLVER="btor"      PS_BUILD_GMPY="FALSE"   TRAVIS_PYTHON_VERSION="3.6.5"
+  # - os: osx
+  #   osx_image: xcode9
+  #   language: generic
+  #   python: 3.6
+  #   env: PS_BUILD_SOLVER="msat_wrap" PS_BUILD_GMPY="FALSE"   TRAVIS_PYTHON_VERSION="3.6.5"
+  # - os: osx
+  #   osx_image: xcode9.3
+  #   language: generic
+  #   python: 3.6
+  #   env: PS_BUILD_SOLVER="z3_wrap"   PS_BUILD_GMPY="FALSE"   TRAVIS_PYTHON_VERSION="3.6.5"
+
+  # - os: osx
+  #   osx_image: xcode9.3
+  #   language: generic
+  #   python: 2.7
+  #   env: PS_BUILD_SOLVER="msat,z3,yices"       PS_BUILD_GMPY="TRUE"   TRAVIS_PYTHON_VERSION="2.7.15"
+  # - os: osx
+  #   osx_image: xcode9.3
+  #   language: generic
+  #   python: 2.7
+  #   env: PS_BUILD_SOLVER="msat,z3,yices"       PS_BUILD_GMPY="FALSE"   TRAVIS_PYTHON_VERSION="2.7.15"
+  # - os: osx
+  #   osx_image: xcode9
+  #   language: generic
+  #   python: 2.7
+  #   env: PS_BUILD_SOLVER="None"      PS_BUILD_GMPY="FALSE"   PS_BUILD_CYTHON="TRUE"   TRAVIS_PYTHON_VERSION="2.7.15"
+  # - os: osx
+  #   osx_image: xcode9
+  #   language: generic
+  #   python: 2.7
+  #   env: PS_BUILD_SOLVER="None"      PS_BUILD_GMPY="FALSE"   PS_BUILD_CYTHON="FALSE"   TRAVIS_PYTHON_VERSION="2.7.15"
+  # - os: osx
+  #   osx_image: xcode9
+  #   language: generic
+  #   python: 2.7
+  #   env: PS_BUILD_SOLVER="msat"      PS_BUILD_GMPY="FALSE"   TRAVIS_PYTHON_VERSION="2.7.15"
+  # - os: osx
+  #   osx_image: xcode9.3
+  #   language: generic
+  #   python: 2.7
+  #   env: PS_BUILD_SOLVER="z3"        PS_BUILD_GMPY="FALSE"   TRAVIS_PYTHON_VERSION="2.7.15"
+  # # - os: osx
+  # #   osx_image: xcode9
+  # #   language: generic
+  # #   python: 2.7
+  # #   env: PS_BUILD_SOLVER="cvc4"      PS_BUILD_GMPY="FALSE"   TRAVIS_PYTHON_VERSION="2.7.15"
+  # - os: osx
+  #   osx_image: xcode9
+  #   language: generic
+  #   python: 2.7
+  #   env: PS_BUILD_SOLVER="yices"     PS_BUILD_GMPY="FALSE"   TRAVIS_PYTHON_VERSION="2.7.15"
+  # # - os: osx
+  # #   osx_image: xcode9
+  # #   language: generic
+  # #   python: 2.7
+  # #   env: PS_BUILD_SOLVER="bdd"       PS_BUILD_GMPY="FALSE"   TRAVIS_PYTHON_VERSION="2.7.15"
+  # # - os: osx
+  # #   osx_image: xcode9
+  # #   language: generic
+  # #   python: 2.7
+  # #   env: PS_BUILD_SOLVER="picosat"   PS_BUILD_GMPY="FALSE"   TRAVIS_PYTHON_VERSION="2.7.15"
+  # # - os: osx
+  # #   osx_image: xcode9
+  # #   language: generic
+  # #   python: 2.7
+  # #   env: PS_BUILD_SOLVER="btor"      PS_BUILD_GMPY="FALSE"   TRAVIS_PYTHON_VERSION="2.7.15"
+  # - os: osx
+  #   osx_image: xcode9
+  #   language: generic
+  #   python: 2.7
+  #   env: PS_BUILD_SOLVER="msat_wrap" PS_BUILD_GMPY="FALSE"   TRAVIS_PYTHON_VERSION="2.7.15"
+  # - os: osx
+  #   osx_image: xcode9.3
+  #   language: generic
+  #   python: 2.7
+  #   env: PS_BUILD_SOLVER="z3_wrap"   PS_BUILD_GMPY="FALSE"   TRAVIS_PYTHON_VERSION="2.7.15"
+
+  # - os: osx
+  #   osx_image: xcode9.3
+  #   language: generic
+  #   python: pypy
+  #   env: PS_BUILD_SOLVER="None"      PS_BUILD_GMPY="FALSE"   PS_BUILD_CYTHON="TRUE"   TRAVIS_PYTHON_VERSION="pypy3.5-5.10.1"
+  # - os: osx
+  #   osx_image: xcode9.3
+  #   language: generic
+  #   python: pypy
+  #   env: PS_BUILD_SOLVER="None"      PS_BUILD_GMPY="FALSE"   PS_BUILD_CYTHON="FALSE"   TRAVIS_PYTHON_VERSION="pypy3.5-5.10.1"
+
+
+git:
+  depth: 10
+
+
+cache:
+  apt: true
+  directories:
+  - ${HOME}/.cache/pip
+  - ${HOME}/Library/Caches/Homebrew # For MacOSX
+  - ${HOME}/python_bindings
+
+before_install:
+  - "./ci/travis_before_install.sh"
+
+
+install:
+  - "./ci/travis_install.sh"
+
+
+script:
+  - "./ci/travis_script.sh"
+
+
+after_success:
+  - "./ci/travis_after_success.sh"
