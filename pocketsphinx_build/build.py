@@ -768,12 +768,11 @@ def get_brew_path_prefix():
 
 def brew_bundle():
     """Run brew bundle"""
-    brew_bin = FindBrew()
-    try:
-        return subprocess.check_output([brew_bin, 'bundle'],
-                                       universal_newlines=True).strip()
-    except:
-        return None
+    # CD to directory
+    ROOT_DIR = os.path.abspath(os.path.join(DIR_OF_THIS_SCRIPT, os.pardir))
+    with cd(ROOT_DIR):
+        checkout_cmd = "brew bundle"
+        _popen_stdout(checkout_cmd)
 
 # SOURCE: https://github.com/seanfisk/fly-compiler/blob/e4448e380f2705c44849d08be00488385fe17897/scripts/build
 ###################### -------------------------
@@ -1273,18 +1272,19 @@ def Main():
   args = ParseArguments()
   # FIXME: Add FindGCC - 10/30/2018
   # FIXME: Add FindClang - 10/30/2018
+  if args.render_dry_run:
+      setup_all_envs()
+      render_envrc_dry_run()
+  if args.brew_bundle:
+      brew_bundle()
+
+  # Always run this
   cmake = FindCmake()
   cmake_common_args = GetCmakeCommonArgs( args )
   # if not args.skip_build:
   #   ExitIfPsBuildLibInUseOnWindows()
   #   BuildPsBuildLib( cmake, cmake_common_args, args )
   #   WritePythonUsedDuringBuild()
-  if args.render_dry_run:
-      setup_all_envs()
-      render_envrc_dry_run()
-
-  if args.brew_bundle:
-      brew_bundle()
   # if not args.no_regex:
   #   BuildRegexModule( cmake, cmake_common_args, args )
   # if args.cs_completer or args.omnisharp_completer or args.all_completers:
