@@ -766,6 +766,15 @@ def get_brew_path_prefix():
     except:
         return None
 
+def brew_bundle():
+    """Run brew bundle"""
+    brew_bin = FindBrew()
+    try:
+        return subprocess.check_output([brew_bin, 'bundle'],
+                                       universal_newlines=True).strip()
+    except:
+        return None
+
 # SOURCE: https://github.com/seanfisk/fly-compiler/blob/e4448e380f2705c44849d08be00488385fe17897/scripts/build
 ###################### -------------------------
 # # Get the path to the LLVM CMake modules.
@@ -869,6 +878,8 @@ def ParseArguments():
                        help = 'Run make clean in source folders' )
   parser.add_argument( '--render-dry-run', action = 'store_true',
                        help = 'Dump env config file' )
+  parser.add_argument( '--brew-bundle', action = 'store_true',
+                       help = 'Run brew bundle and install all dependencies' )
   # parser.add_argument( '--cs-completer', action = 'store_true',
   #                      help = 'Enable C# semantic completion engine.' )
   # parser.add_argument( '--go-completer', action = 'store_true',
@@ -1271,6 +1282,9 @@ def Main():
   if args.render_dry_run:
       setup_all_envs()
       render_envrc_dry_run()
+
+  if args.brew_bundle:
+      brew_bundle()
   # if not args.no_regex:
   #   BuildRegexModule( cmake, cmake_common_args, args )
   # if args.cs_completer or args.omnisharp_completer or args.all_completers:
