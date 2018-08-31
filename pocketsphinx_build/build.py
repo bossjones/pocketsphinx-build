@@ -757,6 +757,9 @@ def brew(*args):
     brew_bin = FindBrew()
     return subprocess.check_output([brew_bin] + list(args)).rstrip()
 
+def run_pkg_config(*args):
+    return subprocess.check_output(['/usr/local/bin/pkg-config'] + list(args)).rstrip()
+
 def get_brew_path_prefix():
     """To get brew path"""
     brew_bin = FindBrew()
@@ -862,6 +865,21 @@ def use_homebrew_for_libffi():
     os.environ['PKG_CONFIG_PATH'] = (
         os.environ.get('PKG_CONFIG_PATH', '') + ':' + pkgconfig)
 # ----------------------------
+
+def get_gst_plugin_path():
+    return run_pkg_config('--variable','pluginsdir','gstreamer-1.0')
+
+def get_gstreamer_pkgconfig_path():
+    base = run_pkg_config('--variable','prefix','gstreamer-1.0')
+    return os.path.join(base, 'lib', 'pkgconfig')
+
+def get_gstreamer_base_pkgconfig_path():
+    base = run_pkg_config('--variable','prefix','gstreamer-base-1.0')
+    return os.path.join(base, 'lib', 'pkgconfig')
+
+def get_gstreamer_plugins_base_pkgconfig_path():
+    base = run_pkg_config('--variable','prefix','gstreamer-plugins-base-1.0')
+    return os.path.join(base, 'lib', 'pkgconfig')
 
 # SOURCE: https://github.com/mengdaya/fuckshell/blob/c88b0792b8a2db3c181938af6c357662993a30c3/thefuck/specific/brew.py
 

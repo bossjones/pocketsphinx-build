@@ -4,17 +4,17 @@
 # https://github.com/Homebrew/homebrew-bundle
 
 # Build system
-brew 'cmake'
-brew 'ninja'
+brew "cmake"
+brew "ninja"
 
 # Tools
-brew 'bison'
-brew 'flex'
+brew "bison"
+brew "flex"
 
 # Libraries
-brew 'boost'
-# tap 'homebrew/versions'
-# brew 'llvm35'
+brew "boost"
+# tap "homebrew/versions"
+# brew "llvm35"
 
 
 tap "homebrew/bundle"
