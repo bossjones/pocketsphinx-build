@@ -950,10 +950,10 @@ def ParseArguments():
 
   args = parser.parse_args()
 
-  # coverage is not supported for c++ on MSVC
-  if not OnWindows() and args.enable_coverage:
-    # We always want a debug build when running with coverage enabled
-    args.enable_debug = True
+#   # coverage is not supported for c++ on MSVC
+#   if not OnWindows() and args.enable_coverage:
+#     # We always want a debug build when running with coverage enabled
+#     args.enable_debug = True
 
   if args.core_tests:
     os.environ[ 'PS_BUILD_TESTRUN' ] = '1'
