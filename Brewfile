@@ -4,7 +4,7 @@
 # https://github.com/Homebrew/homebrew-bundle
 
 # Build system
-brew "cmake"
+# brew "cmake"
 brew "ninja"
 
 # Tools
@@ -42,7 +42,7 @@ brew "ctop"
 brew "dbus-glib"
 brew "libyaml"
 brew "sqlite"
-brew "python@2"
+# brew "python@2"
 brew "dos2unix"
 brew "espeak"
 brew "fontconfig"
