@@ -8,4 +8,7 @@ PYENV_DEBUG=1 pyenv virtualenv --system-site-packages 3.7.0 pocketsphinx-build37
 
 pyenv activate pocketsphinx-build37
 
-env PKG_CONFIG_PATH="/usr/local/opt/libffi/lib/pkgconfig" pip install pygobject==3.28.3 ptpython black isort
+env PKG_CONFIG_PATH="/usr/local/opt/libffi/lib/pkgconfig" pip install pygobject==3.28.3 ptpython black isort ipython pdbpp
+
+export LD_LIBRARY_PATH=/usr/local/lib
+# export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
