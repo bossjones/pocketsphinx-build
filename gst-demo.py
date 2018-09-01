@@ -70,12 +70,10 @@ def main(args):
     Gst.init(None)
 
     pipe = Gst.Pipeline.new('dynamic')
-    src = Gst.ElementFactory.make('videotestsrc', None)
-    sink = Gst.ElementFactory.make('autovideosink', None)
+    src = Gst.ElementFactory.make('videotestsrc')
+    sink = Gst.ElementFactory.make('autovideosink')
     print(type(pipe))
-    # import pdb;pdb.set_trace()
-    pipe.add(src)
-    pipe.add(sink)
+    pipe.add(src,sink)
     src.link(sink)
 
     pdata = ProbeData(pipe, src)
