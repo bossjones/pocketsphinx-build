@@ -6,16 +6,18 @@ Simple example to demonstrate dynamically adding and removing source elements
 to a playing pipeline.
 '''
 
+import os
 import sys
 import random
 
-# --- ipython ---------------
-from IPython.core.debugger import Tracer  # noqa
-from IPython.core import ultratb
+os.environ.get("DEVELOPMENT_MODE"):
+    # --- ipython ---------------
+    from IPython.core.debugger import Tracer  # noqa
+    from IPython.core import ultratb
 
-sys.excepthook = ultratb.FormattedTB(
-    mode="Verbose", color_scheme="Linux", call_pdb=True, ostream=sys.__stdout__
-)
+    sys.excepthook = ultratb.FormattedTB(
+        mode="Verbose", color_scheme="Linux", call_pdb=True, ostream=sys.__stdout__
+    )
 
 import gi
 gi.require_version('Gst', '1.0')
@@ -73,7 +75,7 @@ def main(args):
     src = Gst.ElementFactory.make('videotestsrc')
     sink = Gst.ElementFactory.make('autovideosink')
     print(type(pipe))
-    pipe.add(src,sink)
+    pipe.add(src, sink)
     src.link(sink)
 
     pdata = ProbeData(pipe, src)
