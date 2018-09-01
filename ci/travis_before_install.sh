@@ -38,6 +38,8 @@ if [ "${TRAVIS_OS_NAME}" == "osx" ]; then
     ulimit -n 4096
     ulimit -a
     brew update
+    cd $DIR
+    echo "DIR PATH IS: ${DIR}"
     brew bundle
     brew_install_or_upgrade python
     brew_install_or_upgrade openssl
