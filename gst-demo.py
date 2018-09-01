@@ -10,7 +10,7 @@ import os
 import sys
 import random
 
-os.environ.get("DEVELOPMENT_MODE"):
+if os.environ.get("DEVELOPMENT_MODE"):
     # --- ipython ---------------
     from IPython.core.debugger import Tracer  # noqa
     from IPython.core import ultratb
