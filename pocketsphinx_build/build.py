@@ -757,6 +757,9 @@ def brew(*args):
     brew_bin = FindBrew()
     return subprocess.check_output([brew_bin] + list(args)).rstrip()
 
+def run_pkg_config(*args):
+    return subprocess.check_output(['/usr/local/bin/pkg-config'] + list(args)).rstrip()
+
 def get_brew_path_prefix():
     """To get brew path"""
     brew_bin = FindBrew()
@@ -765,6 +768,14 @@ def get_brew_path_prefix():
                                        universal_newlines=True).strip()
     except:
         return None
+
+def brew_bundle():
+    """Run brew bundle"""
+    # CD to directory
+    ROOT_DIR = os.path.abspath(os.path.join(DIR_OF_THIS_SCRIPT, os.pardir))
+    with cd(ROOT_DIR):
+        checkout_cmd = "brew bundle"
+        _popen_stdout(checkout_cmd)
 
 # SOURCE: https://github.com/seanfisk/fly-compiler/blob/e4448e380f2705c44849d08be00488385fe17897/scripts/build
 ###################### -------------------------
@@ -855,6 +866,21 @@ def use_homebrew_for_libffi():
         os.environ.get('PKG_CONFIG_PATH', '') + ':' + pkgconfig)
 # ----------------------------
 
+def get_gst_plugin_path():
+    return run_pkg_config('--variable','pluginsdir','gstreamer-1.0')
+
+def get_gstreamer_pkgconfig_path():
+    base = run_pkg_config('--variable','prefix','gstreamer-1.0')
+    return os.path.join(base, 'lib', 'pkgconfig')
+
+def get_gstreamer_base_pkgconfig_path():
+    base = run_pkg_config('--variable','prefix','gstreamer-base-1.0')
+    return os.path.join(base, 'lib', 'pkgconfig')
+
+def get_gstreamer_plugins_base_pkgconfig_path():
+    base = run_pkg_config('--variable','prefix','gstreamer-plugins-base-1.0')
+    return os.path.join(base, 'lib', 'pkgconfig')
+
 # SOURCE: https://github.com/mengdaya/fuckshell/blob/c88b0792b8a2db3c181938af6c357662993a30c3/thefuck/specific/brew.py
 
 def ParseArguments():
@@ -869,6 +895,8 @@ def ParseArguments():
                        help = 'Run make clean in source folders' )
   parser.add_argument( '--render-dry-run', action = 'store_true',
                        help = 'Dump env config file' )
+  parser.add_argument( '--brew-bundle', action = 'store_true',
+                       help = 'Run brew bundle and install all dependencies' )
   # parser.add_argument( '--cs-completer', action = 'store_true',
   #                      help = 'Enable C# semantic completion engine.' )
   # parser.add_argument( '--go-completer', action = 'store_true',
@@ -939,10 +967,10 @@ def ParseArguments():
 
   args = parser.parse_args()
 
-  # coverage is not supported for c++ on MSVC
-  if not OnWindows() and args.enable_coverage:
-    # We always want a debug build when running with coverage enabled
-    args.enable_debug = True
+#   # coverage is not supported for c++ on MSVC
+#   if not OnWindows() and args.enable_coverage:
+#     # We always want a debug build when running with coverage enabled
+#     args.enable_debug = True
 
   if args.core_tests:
     os.environ[ 'PS_BUILD_TESTRUN' ] = '1'
@@ -1262,15 +1290,19 @@ def Main():
   args = ParseArguments()
   # FIXME: Add FindGCC - 10/30/2018
   # FIXME: Add FindClang - 10/30/2018
+  if args.render_dry_run:
+      setup_all_envs()
+      render_envrc_dry_run()
+  if args.brew_bundle:
+      brew_bundle()
+
+  # Always run this
   cmake = FindCmake()
   cmake_common_args = GetCmakeCommonArgs( args )
   # if not args.skip_build:
   #   ExitIfPsBuildLibInUseOnWindows()
   #   BuildPsBuildLib( cmake, cmake_common_args, args )
   #   WritePythonUsedDuringBuild()
-  if args.render_dry_run:
-      setup_all_envs()
-      render_envrc_dry_run()
   # if not args.no_regex:
   #   BuildRegexModule( cmake, cmake_common_args, args )
   # if args.cs_completer or args.omnisharp_completer or args.all_completers:

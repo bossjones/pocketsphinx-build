@@ -1,5 +1,13 @@
 language: python
 
+# SOURCE: https://github.com/rdhafidh/skdeps/blob/ea50ef3d66d8733e583eb31ef4db509da3eacc25/skia/third_party/externals/harfbuzz/.travis.yml
+# env:
+#   global:
+#     - CPPFLAGS=""
+#     - CFLAGS="-Werror --coverage"
+#     - CXXFLAGS="-Werror -Wno-deprecated-register --coverage" # glib uses register and clang raises a warning
+#     - LDFLAGS="--coverage"
+
 matrix:
   include:
   - os: osx
